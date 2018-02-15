@@ -1368,7 +1368,7 @@ class DefaultManagerServiceTests(base.TestCase):
             cert_status='create_in_progress'
         )
 
-        self.mock_storage.services_controller.\
+        self.mock_storage.certificates_controller.\
             update_certificate.assert_called_once_with(
                 "domain.com",
                 "san",
@@ -1444,7 +1444,7 @@ class DefaultManagerServiceTests(base.TestCase):
             cert_status='create_in_progress'
         )
 
-        self.mock_storage.services_controller.\
+        self.mock_storage.certificates_controller.\
             update_certificate.assert_called_once_with(
                 "new-domain.com",
                 "san",
@@ -1519,7 +1519,7 @@ class DefaultManagerServiceTests(base.TestCase):
             cert_status='create_in_progress'
         )
 
-        self.mock_storage.services_controller.\
+        self.mock_storage.certificates_controller.\
             update_certificate.assert_called_once_with(
                 "domain.com",
                 "san",
@@ -1583,7 +1583,7 @@ class DefaultManagerServiceTests(base.TestCase):
         )
 
         self.assertFalse(
-            self.mock_storage.services_controller.update_certificate.called
+            self.mock_storage.certificates_controller.update_certificate.called
         )
 
         (
@@ -1617,7 +1617,7 @@ class DefaultManagerServiceTests(base.TestCase):
             )
 
         self.assertFalse(
-            self.mock_storage.services_controller.update_certificate.called
+            self.mock_storage.certificates_controller.update_certificate.called
         )
 
         self.assertFalse(

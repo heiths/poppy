@@ -768,7 +768,7 @@ class DefaultServicesController(base.ServicesController):
                 cert_details[provider]['extra_info']['status'] = cert_status
                 cert_details[provider] = json.dumps(cert_details[provider])
 
-                storage_controller.update_certificate(
+                self.ssl_certificate_storage.update_certificate(
                     cert_obj.domain_name,
                     cert_obj.cert_type,
                     cert_obj.flavor_id,
