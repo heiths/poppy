@@ -14,8 +14,6 @@
 Glossary
 ========
 
-Concepts
-========
 Poppy is an OpenStack-related project to provide a generic and modular vendor-neutral API that wraps provisioning instructions for CDN vendors that support it.
 
 .. glossary::

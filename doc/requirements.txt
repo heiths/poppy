@@ -1,2 +1,10 @@
+openstackdocstheme
+os-api-ref
 oslosphinx
 sphinx
+sphinx-feature-classification
+sphinxcontrib-actdiag
+sphinxcontrib-httpdomain
+sphinxcontrib-pecanwsme
+sphinxcontrib-seqdiag
+sphinxcontrib-websupport
