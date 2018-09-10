@@ -50,6 +50,9 @@ Poppy is an OpenStack-related project to provide a generic and modular vendor-ne
    Purge
      Purging removes content from the edge servers, so it can be refreshed from your origin servers.
 
+   Responder
+     Provides a consistent way of formatting responses from various third-party APIs.
+
    Restriction
      A restriction enables the user to define rules about who can or cannot access content from the cache. Examples of a restriction are allowing requests only from certain domains, geographies, or IP addresses.
 
