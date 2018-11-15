@@ -2,8 +2,13 @@
 
 
 is_ready() {
-    nc -z cassandra 9042
+    curl -s --include --header "X-Project-ID: 000" http://dev-test.drivesrvr.com/v1.0/ping | head -n 1
 }
+if [[ is_ready == "HTTP/1.1 204 No Content" ]]; then
+    echo "WORKS"
+else
+    echo "Not yet"
+fi
 
 # wait until cassandra is ready
 while ! is_ready -eq 1

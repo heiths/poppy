@@ -52,6 +52,6 @@ if [ "$AUTORUN" ]; then
     docker-compose up --build -d
     docker ps
     sleep 5
-    exec "$WORKSPACE/docker/dev/_init_setup.sh"
+    exec docker-compose -f "$WORKSPACE/docker-compose.yml" exec poppy-server init-poppy-setup
     # docker-compose  exec  poppy-server  "init-poppy-setup"
 fi

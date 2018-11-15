@@ -31,6 +31,10 @@ LOG = log.getLogger(__name__)
 class ServicesController(base.ServicesBase):
 
     def __init__(self, driver):
+        """
+
+        :type driver: poppy.dns.rackspace.driver.DNSProvider
+        """
         super(ServicesController, self).__init__(driver)
 
         self.client = driver.client
@@ -287,7 +291,37 @@ class ServicesController(base.ServicesBase):
 
         return shared_ssl_domain_name
 
-    def create(self, responders):
+    def generate_san_ssl_domain_suffix(self):
+        """Rackspace DNS scheme to generate a san/sni ssl domain suffix
+
+        :return: A generator that yields a random ssl domain name
+        """
+        return self._generate_sharded_domain_name(
+            self._driver.rackdns_conf.shard_prefix,
+            self._driver.rackdns_conf.num_shards,
+            self._driver.rackdns_conf.url
+        )
+
+    def _generate_temporary_provider_links(self, domain_name):
+        """Create a temporary domain
+
+        :param domain_name: The domain associated with the certificate
+        :type domain_name: str
+        :return: A domain to which a customer can CNAME. This will temporarily point to a placeholder domain, but will
+         eventually point to the provider certificate.
+        :rtype: dict
+        """
+
+        san_ssl_suffix = next(self.generate_san_ssl_domain_suffix())
+        _cert_domain = "{}.{}".format(domain_name, san_ssl_suffix)
+
+        return {
+            "href": self._driver.temp_cname_domain,
+            "rel": 'access_url',
+            "domain": _cert_domain
+        }
+
+    def create(self, responders, cert_domain=None):
         """Create CNAME record for a service.
 
         :param responders: responders from providers
@@ -312,6 +346,15 @@ class ServicesController(base.ServicesBase):
         links = {}
         for responder in responders:
             for provider_name in responder:
+                if not responder[provider_name]['links']:
+                    # Provider doesn't have links, so we're generating one and will replace the
+                    customer_domain = responder[provider_name]['domains_certificate_status'].keys()[0]
+                    responder[provider_name]['links'].append({
+                        "href": cert_domain or self._driver.temp_cname_domain,
+                        "rel": 'access_url',
+                        "domain": customer_domain
+                    })
+
                 for link in responder[provider_name]['links']:
                     if link['rel'] == 'access_url':
                         # We need to distinguish shared ssl domains in

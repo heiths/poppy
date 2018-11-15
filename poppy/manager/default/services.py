@@ -302,8 +302,29 @@ class DefaultServicesController(base.ServicesController):
             'context_dict': context_utils.get_current().to_dict()
         }
 
-        self.distributed_task_controller.submit_task(
-            create_service.create_service, **kwargs)
+        cert_type = service_json['domains'][0].get('certificate', None)
+
+        if cert_type:
+            domain_name = service_json['domains'][0]['domain']
+
+            cert_obj = ssl_certificate.SSLCertificate(flavor.flavor_id, domain_name, cert_type, project_id, {})
+            kwargs['cert_obj_json'] = json.dumps(cert_obj.to_dict())
+
+            try:
+                self.ssl_certificate_storage.create_certificate(
+                    project_id,
+                    cert_obj
+                )
+
+            # ValueError will be raised if the cert_info has already existed
+            except ValueError as e:
+                raise e
+
+            self.distributed_task_controller.submit_task(
+                create_service.create_ssl_service, **kwargs)
+        else:
+            self.distributed_task_controller.submit_task(
+                create_service.create_service, **kwargs)
 
         return service_obj
 

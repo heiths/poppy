@@ -29,17 +29,27 @@ conf(project='poppy', prog='poppy', args=[])
 
 
 class CreateProviderSSLCertificateTask(task.Task):
-    default_provides = "responders"
+    default_provides = ("ssl_responders", "cert_domain")
 
-    def execute(self, providers_list_json, cert_obj_json, enqueue=True,
+    def execute(self, providers_list_json, cert_obj_json, enqueue=False,
                 https_upgrade=False):
+        """Create responder from provider list of certificate creation.
+
+        :param unicode providers_list_json: list of providers(list converted to json)
+        :param unicode cert_obj_json: dict of certificate(dict converted to json)
+        :param bool enqueue: allows to push the queue directly to zookeeper
+        :param bool https_upgrade: upgrade from http to https
+
+        :return: list of responders
+        :rtype: list[dict]
+        """
         service_controller = memoized_controllers.task_controllers('poppy')
 
         # call provider create_ssl_certificate function
         providers_list = json.loads(providers_list_json)
         cert_obj = ssl_certificate.load_from_json(json.loads(cert_obj_json))
 
-        responders = []
+        ssl_responders = []
         # try to create all certificates from each provider
         for provider in providers_list:
             LOG.info('Starting to create ssl certificate: {0}'
@@ -50,18 +60,24 @@ class CreateProviderSSLCertificateTask(task.Task):
                 enqueue,
                 https_upgrade
             )
-            responders.append(responder)
+            ssl_responders.append(responder)
 
-        return responders
+        return ssl_responders, ssl_responders[0]['Akamai']['cert_domain']
 
 
 class SendNotificationTask(task.Task):
 
-    def execute(self, project_id, responders, upgrade=False):
+    def execute(self, project_id, ssl_responders, upgrade=False):
+        """Send mail to users.
+
+        :param unicode project_id: project id of the user
+        :param list[dict] ssl_responders: list of responder
+        :param bool upgrade: upgrade from http to https
+        """
         service_controller = memoized_controllers.task_controllers('poppy')
 
         notification_content = ""
-        for responder in responders:
+        for responder in ssl_responders:
             for provider in responder:
                 notification_content += (
                     "Project ID: %s, Provider: %s, Detail: %s" %
@@ -85,13 +101,19 @@ class SendNotificationTask(task.Task):
 
 class UpdateCertInfoTask(task.Task):
 
-    def execute(self, project_id, cert_obj_json, responders):
+    def execute(self, project_id, cert_obj_json, ssl_responders):
+        """Update certificate information to cassandra.
+
+        :param unicode project_id: project id of the user
+        :param unicode cert_obj_json: dict of certificate(dict converted to json)
+        :param list[dict] ssl_responders: list of responder
+        """
         service_controller, self.ssl_certificate_manager = \
             memoized_controllers.task_controllers('poppy', 'ssl_certificate')
         self.storage_controller = self.ssl_certificate_manager.storage
 
         cert_details = {}
-        for responder in responders:
+        for responder in ssl_responders:
             for provider in responder:
                 cert_details[provider] = json.dumps(responder[provider])
 
@@ -110,6 +132,13 @@ class CreateStorageSSLCertificateTask(task.Task):
     """This task is meant to be used in san rerun flow."""
 
     def execute(self, project_id, cert_obj_json):
+        """Create certificate if san rerun executed.
+
+        When san rerun executed, create the certificate information at cassandra.
+
+        :param unicode project_id: project id of the user
+        :param unicode cert_obj_json: dict of certificate(dict converted to json)
+        """
         cert_obj = ssl_certificate.load_from_json(json.loads(cert_obj_json))
 
         service_controller, self.ssl_certificate_manager = \

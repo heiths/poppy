@@ -105,7 +105,7 @@ recipients = "$MAILGUN_RECIPIENTS"
 
 [drivers:provider:akamai:queue]
 queue_backend_type = zookeeper
-queue_backend_host = localhost
+queue_backend_host = zookeeper
 queue_backend_port = 2181
 mod_san_queue_path = '/mod_san_queue'
 san_mapping_queue_path = '/san_mapping_queue'

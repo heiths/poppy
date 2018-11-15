@@ -430,6 +430,23 @@ class DefaultSSLCertificateController(base.SSLCertificateController):
         return res
 
     def get_certs_by_status(self, status):
+        # type: (unicode) -> list[dict]
+        """Gets a list of certificates with a given status.
+
+        Valid statuses include:
+          - create_in_progress
+          - deployed
+          - failed
+          - cancelled
+
+        Example return: `[{u'domain_name':  u'cdn.example.com'}]`
+
+        A full list of valid statuses: `poppy.model.helpers.provider_details.VALID_DOMAIN_CERTIFICATE_STATUSES`
+
+        :param unicode status: A valid status for domain certificates
+        :return: A list of dictionaries containing domain names whose certificate matches a given status.
+        """
+
         certs_by_status = self.storage.get_certs_by_status(status)
 
         return certs_by_status
