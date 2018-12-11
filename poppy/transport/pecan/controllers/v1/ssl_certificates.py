@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import json
+import uuid
 
 import pecan
 from pecan import hooks
@@ -49,13 +50,22 @@ class SSLCertificateController(base.Controller, hooks.HookController):
             self._driver.manager.ssl_certificate_controller)
 
         certificate_info_dict = json.loads(pecan.request.body.decode('utf-8'))
+        service_id = ""
+        try:
+            service_id = pecan.request.headers.get('Referer').split("/")[-1]
+        except:
+            print("NOT A VALID SERVICE ID?")
+            print(pecan.request.headers.get('Referer'))
+            print("^^^^^^^^")
 
         try:
             project_id = certificate_info_dict.get('project_id')
             cert_obj = ssl_certificate.load_from_json(certificate_info_dict)
             cert_obj.project_id = project_id
             ssl_certificate_controller.create_ssl_certificate(project_id,
-                                                              cert_obj)
+                                                              cert_obj,
+                                                              service_id=service_id)
+
         except LookupError as e:
             pecan.abort(400, detail='Provisioning ssl certificate failed. '
                         'Reason: %s' % str(e))

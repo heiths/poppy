@@ -27,7 +27,6 @@ from poppy.distributed_task.utils import exc_loader
 from poppy.distributed_task.utils import memoized_controllers
 from poppy.model.helpers import provider_details
 
-
 LOG = log.getLogger(__name__)
 conf = cfg.CONF
 conf(project='poppy', prog='poppy', args=[])
@@ -75,10 +74,9 @@ class CreateProviderServicesTask(task.Task):
                             project_id=project_id,
                             flavor_id=service_obj.flavor_id,
                             cert_type=domain.certificate
-                            ))
+                        ))
                 except ValueError:
                     domain.cert_info = None
-
 
         responders = []
         # try to create all service from each provider
@@ -105,7 +103,7 @@ class CreateProviderServicesTask(task.Task):
 class CreateServiceDNSMappingTask(task.Task):
     default_provides = "dns_responder"
 
-    def execute(self, responders, retry_sleep_time, project_id, service_id, cert_domain):
+    def execute(self, responders, retry_sleep_time, project_id, service_id, domain_name):
         """Creates the mapping between dns service and provider url.
 
         The goal here is to get or create the (dns provider) domain that
@@ -142,6 +140,20 @@ class CreateServiceDNSMappingTask(task.Task):
         """
         service_controller, dns = \
             memoized_controllers.task_controllers('poppy', 'dns')
+        _, self.ssl_certificate_manager = \
+            memoized_controllers.task_controllers('poppy', 'ssl_certificate')
+
+        cert_domain = dns._driver.cname_domain_placeholder
+
+        try:
+            cert_domain = self.ssl_certificate_manager.storage.get_certs_by_domain(
+                domain_name).cert_details['Akamai']['cert_domain']
+        except ValueError:
+            LOG.debug("The cert for {} was not found, using the configured placeholder domain".format(domain_name))
+        except KeyError:
+            LOG.debug("The cert for {} appears to have no 'cert_details'".format(domain_name))
+        except Exception as e:
+            LOG.debug("An exception occurred when getting the certificate for domain: {}".format(domain_name))
 
         dns_responder = dns.create(responders, cert_domain=cert_domain)
         for provider_name in dns_responder:
@@ -218,9 +230,9 @@ class CreateServiceDNSMappingTask(task.Task):
                     for provider_name in responder:
                         provider_service_id = (
                             service_controller._driver.
-                            providers[provider_name.lower()].obj.
-                            service_controller.
-                            get_provider_service_id(service_obj))
+                                providers[provider_name.lower()].obj.
+                                service_controller.
+                                get_provider_service_id(service_obj))
                         provider_details_dict[provider_name] = (
                             provider_details.ProviderDetail(
                                 provider_service_id=provider_service_id,
@@ -245,8 +257,6 @@ class CreateServiceDNSMappingTask(task.Task):
                             'retrying'.format(retry_sleep_time))
                 if retry_sleep_time is not None:
                     time.sleep(retry_sleep_time)
-
-
 class CreateLogDeliveryContainerTask(task.Task):
     default_provides = "log_responders"
 

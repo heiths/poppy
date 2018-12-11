@@ -294,10 +294,13 @@ class DeleteCertificatesForService(task.Task):
 
         kwargs = {
             'project_id': project_id,
-            'context_dict': context_utils.get_current().to_dict(),
+            'context_dict': {},
             'flavor_id': service_obj.flavor_id,
             'providers_list': service_obj.provider_details.keys()
         }
+
+        if context_utils.get_current() is not None:
+            kwargs['context_dict'] = context_utils.get_current().to_dict()
 
         for domain in service_obj.domains:
             if (

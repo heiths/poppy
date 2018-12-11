@@ -98,6 +98,11 @@ class ServicesController(base.ServicesBase):
                 else:
                     name = '{0}.{1}'.format(domain_name, subdomain_name)
 
+            # target = self._driver.cname_domain_placeholder  # Default to the domain defined in the config
+            # if links[link] == self._driver.cname_domain_placeholder:
+            #     suffix = self._driver.akamai_https_access_url_suffix
+            #     target = links[link].split(suffix)[0] + suffix  # Account for existing suffix
+
             cname_record = {'type': 'CNAME',
                             'name': name,
                             'data': links[link],
@@ -291,36 +296,6 @@ class ServicesController(base.ServicesBase):
 
         return shared_ssl_domain_name
 
-    def generate_san_ssl_domain_suffix(self):
-        """Rackspace DNS scheme to generate a san/sni ssl domain suffix
-
-        :return: A generator that yields a random ssl domain name
-        """
-        return self._generate_sharded_domain_name(
-            self._driver.rackdns_conf.shard_prefix,
-            self._driver.rackdns_conf.num_shards,
-            self._driver.rackdns_conf.url
-        )
-
-    def _generate_temporary_provider_links(self, domain_name):
-        """Create a temporary domain
-
-        :param domain_name: The domain associated with the certificate
-        :type domain_name: str
-        :return: A domain to which a customer can CNAME. This will temporarily point to a placeholder domain, but will
-         eventually point to the provider certificate.
-        :rtype: dict
-        """
-
-        san_ssl_suffix = next(self.generate_san_ssl_domain_suffix())
-        _cert_domain = "{}.{}".format(domain_name, san_ssl_suffix)
-
-        return {
-            "href": self._driver.temp_cname_domain,
-            "rel": 'access_url',
-            "domain": _cert_domain
-        }
-
     def create(self, responders, cert_domain=None):
         """Create CNAME record for a service.
 
@@ -341,7 +316,6 @@ class ServicesController(base.ServicesBase):
                         'error_msg': error_msg
                     }
                     return self.responder.failed(providers, error_dict)
-
         # gather the provider urls and cname them
         links = {}
         for responder in responders:
@@ -349,8 +323,9 @@ class ServicesController(base.ServicesBase):
                 if not responder[provider_name]['links']:
                     # Provider doesn't have links, so we're generating one and will replace the
                     customer_domain = responder[provider_name]['domains_certificate_status'].keys()[0]
+
                     responder[provider_name]['links'].append({
-                        "href": cert_domain or self._driver.temp_cname_domain,
+                        "href": cert_domain or self._driver.cname_domain_placeholder,
                         "rel": 'access_url',
                         "domain": customer_domain
                     })

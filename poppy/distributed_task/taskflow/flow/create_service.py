@@ -15,16 +15,14 @@
 
 from oslo_config import cfg
 from oslo_log import log
-from taskflow.patterns import linear_flow
 from taskflow import retry
 from taskflow.patterns import linear_flow
 
-from poppy.distributed_task.taskflow.task import common, create_ssl_certificate_tasks
+from poppy.distributed_task.taskflow.flow import recreate_ssl_certificate, create_ssl_certificate
+from poppy.distributed_task.taskflow.task import common
 from poppy.distributed_task.taskflow.task import create_service_tasks
 
-
 LOG = log.getLogger(__name__)
-
 
 conf = cfg.CONF
 conf(project='poppy', prog='poppy', args=[])
@@ -32,8 +30,6 @@ conf(project='poppy', prog='poppy', args=[])
 
 def create_service():
     flow = linear_flow.Flow('Creating poppy-service').add(
-        linear_flow.Flow('Update Oslo Context').add(
-            common.ContextUpdateTask()),
         linear_flow.Flow('Create Provider Services').add(
             create_service_tasks.CreateProviderServicesTask()),
         linear_flow.Flow('Create Service DNS Mapping flow',
@@ -47,28 +43,12 @@ def create_service():
             rebind=['responders', 'dns_responder', 'log_responders']),
         common.UpdateProviderDetailTask(rebind=['provider_details_dict'])
     )
+
     return flow
 
 
 def create_ssl_service():
-    flow = linear_flow.Flow('Creating poppy-service').add(
-        linear_flow.Flow('Update Oslo Context').add(
-            common.ContextUpdateTask()),
-        linear_flow.Flow('Create Provider Services').add(
-            create_service_tasks.CreateProviderServicesTask()),
-        linear_flow.Flow("Provision poppy ssl certificate",
-                         retry=retry.Times(5)).add(
-            create_ssl_certificate_tasks.CreateProviderSSLCertificateTask(),
-            create_ssl_certificate_tasks.UpdateCertInfoTask()),
-        linear_flow.Flow('Create Service DNS Mapping flow',
-                         retry=retry.ParameterizedForEach(
-                             rebind=['time_seconds'],
-                             provides='retry_sleep_time')).add(
-            create_service_tasks.CreateServiceDNSMappingTask(
-                rebind=['responders'])),
-        create_service_tasks.CreateLogDeliveryContainerTask(),
-        create_service_tasks.GatherProviderDetailsTask(
-            rebind=['responders', 'dns_responder', 'log_responders']),
-        common.UpdateProviderDetailTask(rebind=['provider_details_dict']),
+    return create_service().add(
+        recreate_ssl_certificate.recreate_ssl_certificate(),
+        common.UpdateCname()
     )
-    return flow

@@ -30,8 +30,6 @@ conf(project='poppy', prog='poppy', args=[])
 
 def update_service():
     flow = linear_flow.Flow('Updating poppy-service').add(
-        linear_flow.Flow('Update Oslo Context').add(
-            common.ContextUpdateTask()),
         linear_flow.Flow('Update Provider Services').add(
             update_service_tasks.UpdateProviderServicesTask()),
         linear_flow.Flow('Update Service DNS Mapping flow',

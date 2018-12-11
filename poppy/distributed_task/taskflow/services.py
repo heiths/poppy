@@ -15,6 +15,7 @@
 
 
 from oslo_log import log
+from oslo_context import context as context_utils
 from oslo_utils import uuidutils
 from taskflow.conductors.backends import impl_blocking
 from taskflow import engines
@@ -86,6 +87,10 @@ class ServicesController(base.ServicesController):
                 job_details = {
                     'store': kwargs
                 }
+                context = context_utils.RequestContext.from_dict(kwargs)
+                context.update_store()
+                job_details['store'].update(context.to_dict())
+
                 job = board.post(job_name,
                                  book=job_logbook,
                                  details=job_details)

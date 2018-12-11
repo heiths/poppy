@@ -62,7 +62,15 @@ class CreateProviderSSLCertificateTask(task.Task):
             )
             ssl_responders.append(responder)
 
-        return ssl_responders, ssl_responders[0]['Akamai']['cert_domain']
+        _cert_domain = ""
+        try:
+            _cert_domain = ssl_responders[0]['Akamai']['cert_domain']
+        except IndexError:
+            LOG.debug("No responders found.")
+        except KeyError:
+            LOG.debug("Expected the Akamai responder to have a cert_domain key")
+
+        return ssl_responders, _cert_domain
 
 
 class SendNotificationTask(task.Task):

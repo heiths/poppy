@@ -31,8 +31,6 @@ conf(project='poppy', prog='poppy', args=[])
 
 def delete_service():
     flow = linear_flow.Flow('Deleting poppy-service').add(
-        linear_flow.Flow('Update Oslo Context').add(
-            common.ContextUpdateTask()),
         linear_flow.Flow('Delete Provider Services').add(
             delete_service_tasks.DeleteProviderServicesTask()),
         linear_flow.Flow('Delete Service DNS Mapping flow',

@@ -31,8 +31,6 @@ conf(project='poppy', prog='poppy', args=[])
 
 def disable_service():
     flow = linear_flow.Flow('Disable service').add(
-        linear_flow.Flow('Update Oslo Context').add(
-            common.ContextUpdateTask()),
         linear_flow.Flow('Update Service State').add(
             update_service_state_tasks.UpdateServiceStateTask()),
         linear_flow.Flow('Break DNS Chain',
@@ -47,8 +45,6 @@ def disable_service():
 
 def enable_service():
     flow = linear_flow.Flow('Enable service').add(
-        linear_flow.Flow('Update Oslo Context').add(
-            common.ContextUpdateTask()),
         linear_flow.Flow('Update Service State').add(
             update_service_state_tasks.UpdateServiceStateTask()),
         linear_flow.Flow('Break DNS Chain',

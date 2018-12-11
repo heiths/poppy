@@ -31,8 +31,6 @@ conf(project='poppy', prog='poppy', args=[])
 
 def purge_service():
     flow = linear_flow.Flow('Purging poppy-service').add(
-        linear_flow.Flow('Update Oslo Context').add(
-            common.ContextUpdateTask()),
         linear_flow.Flow('Purging Provider Services').add(
             purge_service_tasks.PurgeProviderServicesTask()),
         linear_flow.Flow('Purge provider details').add(

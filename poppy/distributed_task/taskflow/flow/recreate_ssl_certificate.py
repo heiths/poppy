@@ -31,14 +31,12 @@ conf(project='poppy', prog='poppy', args=[])
 
 def recreate_ssl_certificate():
     flow = linear_flow.Flow('Recreating poppy ssl certificate').add(
-        linear_flow.Flow('Update Oslo Context').add(
-            common.ContextUpdateTask()),
         delete_ssl_certificate_tasks.DeleteStorageSSLCertificateTask(),
         create_ssl_certificate_tasks.CreateStorageSSLCertificateTask(),
         linear_flow.Flow("Provision poppy ssl certificate",
                          retry=retry.Times(5)).add(
             create_ssl_certificate_tasks.CreateProviderSSLCertificateTask(),
-            update_service_tasks.UpdateServiceDNSMappingTask(),
+            update_service_tasks.UpdateCnameRecord(),
             ),
         create_ssl_certificate_tasks.SendNotificationTask(),
         create_ssl_certificate_tasks.UpdateCertInfoTask()

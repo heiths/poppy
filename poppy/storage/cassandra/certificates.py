@@ -95,7 +95,9 @@ class CertificatesController(base.CertificatesController):
                                    comparing_cert_type=cert_obj.cert_type,
                                    comparing_flavor_id=cert_obj.flavor_id,
                                    comparing_project_id=project_id):
-            raise ValueError('Certificate already exists '
+            # raise ValueError('Certificate already exists '
+            #                  'for {0} '.format(cert_obj.domain_name))
+            LOG.debug('Certificate already exists '
                              'for {0} '.format(cert_obj.domain_name))
 
         args = {

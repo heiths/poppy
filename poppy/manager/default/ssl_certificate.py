@@ -44,7 +44,7 @@ class DefaultSSLCertificateController(base.SSLCertificateController):
         self.flavor_controller = self._driver.storage.flavors_controller
 
     def create_ssl_certificate(
-            self, project_id, cert_obj, https_upgrade=False):
+            self, project_id, cert_obj, https_upgrade=False, service_id=None):
 
         if (not validators.is_valid_domain_name(cert_obj.domain_name)) or \
                 (validators.is_root_domain(
@@ -71,12 +71,17 @@ class DefaultSSLCertificateController(base.SSLCertificateController):
             raise e
 
         providers = [p.provider_id for p in flavor.providers]
+
+        if service_id is None:
+            service_id = "GET SERVICE ID FUNCTION ?"
         kwargs = {
             'providers_list_json': json.dumps(providers),
             'project_id': project_id,
+            'service_id': service_id,
             'cert_obj_json': json.dumps(cert_obj.to_dict()),
             'context_dict': context_utils.get_current().to_dict()
         }
+
         if https_upgrade is True:
             kwargs['https_upgrade'] = True
 
@@ -193,34 +198,39 @@ class DefaultSSLCertificateController(base.SSLCertificateController):
 
             # double check in POST. This check should really be first done in
             # PUT
+            domain_service_map = {}
             for r in retry_list:
                 err_state = False
                 service_obj = self.service_storage\
                     .get_service_details_by_domain_name(r['domain_name'])
                 if service_obj is None and r.get('validate_service', True):
                     err_state = True
-                    LOG.error(
-                        u'Domain {0} does not exist on any service, are you '
-                        'sure you want to proceed request, {1}? You can set '
-                        'validate_service to False to retry this san-retry '
-                        'request forcefully'.format(r['domain_name'], r)
-                    )
+                    continue
+                    # LOG.error(
+                    #     u'Domain {0} does not exist on any service, are you '
+                    #     'sure you want to proceed request, {1}? You can set '
+                    #     'validate_service to False to retry this san-retry '
+                    #     'request forcefully'.format(r['domain_name'], r)
+                    # )
                 elif (
                     service_obj is not None and
                     service_obj.operator_status.lower() == 'disabled'
                 ):
                     err_state = True
-                    LOG.error(
-                        u'The service for domain {0} is disabled.'
-                        'No certificates will be created for '
-                        'service {1} while it remains in {2} operator_status'
-                        'request forcefully'.format(
-                            r['domain_name'],
-                            service_obj.service_id,
-                            service_obj.operator_status
-                        )
-                    )
+                    # LOG.error(
+                    #     u'The service for domain {0} is disabled.'
+                    #     'No certificates will be created for '
+                    #     'service {1} while it remains in {2} operator_status'
+                    #     'request forcefully'.format(
+                    #         r['domain_name'],
+                    #         service_obj.service_id,
+                    #         service_obj.operator_status
+                    #     )
+                    # )
+                    continue
+
                 try:
+                    domain_service_map[r['domain_name']] = service_obj.service_id
                     cert_for_domain = self.storage.get_certs_by_domain(
                         r['domain_name'])
 
@@ -292,7 +302,8 @@ class DefaultSSLCertificateController(base.SSLCertificateController):
                         'enqueue': False,
                         'context_dict': context_utils.RequestContext(
                             tenant=cert_obj.project_id
-                        ).to_dict()
+                        ).to_dict(),
+                        'service_id':domain_service_map[cert_obj.domain_name]
                     }
                     self.distributed_task_controller.submit_task(
                         recreate_ssl_certificate.recreate_ssl_certificate,

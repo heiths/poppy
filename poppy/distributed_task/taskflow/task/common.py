@@ -27,7 +27,6 @@ from poppy.transport.pecan.models.request import (
     provider_details as req_provider_details
 )
 
-
 LOG = log.getLogger(__name__)
 
 conf = cfg.CONF
@@ -168,7 +167,7 @@ class UpdateProviderDetailTask(task.Task):
         service_obj.provider_details = provider_details_dict
 
         enabled = lambda provider: any([True if 'log_delivery'
-                                        in access_url else False
+                                                in access_url else False
                                         for access_url
                                         in provider.access_urls])
 
@@ -303,3 +302,30 @@ class UpdateProviderDetailErrorTask(task.Task):
                 changed_provider_details_dict[provider_name].to_dict())
 
         return changed_provider_details_dict
+
+
+class UpdateCname(task.Task):
+    def execute(self, responders, service_id, domain_name):
+        """
+
+        :param responders:
+        :param service_id:
+        :param provider_details:
+        :param hard:
+        :return:
+        """
+        service_controller, dns = \
+            memoized_controllers.task_controllers('poppy', 'dns')
+        _, self.ssl_certificate_manager = \
+            memoized_controllers.task_controllers('poppy', 'ssl_certificate')
+
+        try:
+            cert_domain = self.ssl_certificate_manager.storage.get_certs_by_domain(
+                domain_name).cert_details['Akamai']['cert_domain']
+        except ValueError:
+            LOG.debug("The cert for {} was not found, using the configured placeholder domain".format(domain_name))
+        except KeyError:
+            LOG.debug("The cert for {} appears to have no 'cert_details'".format(domain_name))
+        except Exception as e:
+            LOG.debug("An exception occurred when getting the certificate for domain: {}".format(domain_name))
+

@@ -30,7 +30,6 @@ from poppy.distributed_task.utils import memoized_controllers
 from poppy.model.helpers import provider_details
 from poppy.transport.pecan.models.request import service
 
-
 LOG = log.getLogger(__name__)
 
 conf = cfg.CONF
@@ -82,27 +81,33 @@ class UpdateProviderServicesTask(task.Task):
 class UpdateCnameRecord(task.Task):
     default_provides = "dns_responder"
 
-    def execute(self, cert_domain=None):
+    def execute(self, project_id, service_id, cert_domain=None):
         """Updates the mapping between dns service and provider url."""
-
 
         service_controller, dns = \
             memoized_controllers.task_controllers('poppy', 'dns')
 
-        _, storage = \
+        service_controller, self.storage_controller = \
             memoized_controllers.task_controllers('poppy', 'storage')
 
+        if cert_domain:
+            provider_details = self.storage_controller.get_provider_details(
+                project_id,
+                service_id)
 
-        # if cert_domain is None:
-        #     Put back in queue
-
-
-        domain = storage.get_certs_by_domain(cert_domain)
-
-
-        dns_responder = dns._change_cname_record(domain, service_obj, responders)
-
-
+            access_urls = provider_details["Akamai"].access_urls
+            source_url = access_urls[0].get('operator_url')
+            dns._change_cname_record(source_url, cert_domain, False)
+            LOG.info("Successfully updated cname for {0} "
+                     "from {1} to {2}".format(source_url,
+                                              "origin.raxcdn.com",
+                                              cert_domain))
+        else:
+            # Put back into mod san queue
+            LOG.info("Certificate still not available, so "
+                     "Provider layer must have already moved "
+                     "this cert obj to mod san queue."
+                     "No need to do that again. Just pass")
 
 
 class UpdateServiceDNSMappingTask(task.Task):
@@ -205,9 +210,9 @@ class UpdateServiceDNSMappingTask(task.Task):
                     for provider_name in responder:
                         provider_service_id = (
                             service_controller._driver.
-                            providers[provider_name.lower()].obj.
-                            service_controller.
-                            get_provider_service_id(service_obj))
+                                providers[provider_name.lower()].obj.
+                                service_controller.
+                                get_provider_service_id(service_obj))
                         provider_details_dict[provider_name] = (
                             provider_details.ProviderDetail(
                                 provider_service_id=provider_service_id,
@@ -325,7 +330,7 @@ class GatherProviderDetailsTask(task.Task):
                         if not any('log_delivery' in access_url
                                    for access_url in access_urls):
                             access_urls.append({'log_delivery':
-                                                log_responders})
+                                                    log_responders})
                     provider_details_dict[provider_name] = (
                         provider_details.ProviderDetail(
                             provider_service_id=responder[provider_name]['id'],
@@ -450,8 +455,8 @@ class DeleteCertsForRemovedDomains(task.Task):
         old_domains = set([
             domain.domain for domain in service_old.domains
             if domain.protocol == 'https'
-            and
-            domain.certificate in ['san', 'sni']
+               and
+               domain.certificate in ['san', 'sni']
         ])
 
         # get new domains
@@ -460,8 +465,8 @@ class DeleteCertsForRemovedDomains(task.Task):
         new_domains = set([
             domain.domain for domain in service_new.domains
             if domain.protocol == 'https'
-            and
-            domain.certificate in ['san', 'sni']
+               and
+               domain.certificate in ['san', 'sni']
         ])
 
         removed_domains = old_domains.difference(new_domains)
@@ -469,11 +474,11 @@ class DeleteCertsForRemovedDomains(task.Task):
         LOG.info("update_service Old domains: {0}".format(old_domains))
         LOG.info("update_service New domains: {0}".format(new_domains))
         LOG.info("update_service Deleted domains: {0}".format(removed_domains))
-
+        context_dict = {} if context_utils.get_current() is None else context_utils.get_current().to_dict()
         kwargs = {
             'project_id': project_id,
             'cert_type': 'san',
-            'context_dict': context_utils.get_current().to_dict(),
+            'context_dict': context_dict,
             'flavor_id': service_new.flavor_id,
             'providers_list': service_new.provider_details.keys()
         }

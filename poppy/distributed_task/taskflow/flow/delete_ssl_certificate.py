@@ -31,8 +31,6 @@ conf(project='poppy', prog='poppy', args=[])
 
 def delete_ssl_certificate():
     flow = linear_flow.Flow('Deleting poppy ssl certificate').add(
-        linear_flow.Flow('Update Oslo Context').add(
-            common.ContextUpdateTask()),
         linear_flow.Flow("Deleting poppy ssl certificate",
                          retry=retry.Times(5)).add(
             delete_ssl_certificate_tasks.DeleteProviderSSLCertificateTask()

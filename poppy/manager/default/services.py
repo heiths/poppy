@@ -299,7 +299,9 @@ class DefaultServicesController(base.ServicesController):
             'auth_token': auth_token,
             'service_id': service_id,
             'time_seconds': self.determine_sleep_times(),
-            'context_dict': context_utils.get_current().to_dict()
+            'context_dict': context_utils.get_current().to_dict(),
+            'enqueue': False,
+
         }
 
         cert_type = service_json['domains'][0].get('certificate', None)
@@ -309,6 +311,8 @@ class DefaultServicesController(base.ServicesController):
 
             cert_obj = ssl_certificate.SSLCertificate(flavor.flavor_id, domain_name, cert_type, project_id, {})
             kwargs['cert_obj_json'] = json.dumps(cert_obj.to_dict())
+            kwargs['domain_name'] = cert_obj.domain_name
+            kwargs['cert_type'] = cert_obj.cert_type
 
             try:
                 self.ssl_certificate_storage.create_certificate(
